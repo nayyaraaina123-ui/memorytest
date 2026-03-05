@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Test Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<style>
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+user-select:none;
+font-family:'Press Start 2P',cursive;
+}
+
+body{
+color:white;
+height:100vh;
+overflow:hidden;
+display:flex;
+justify-content:center;
+align-items:center;
+image-rendering:pixelated;
+background-color:#111;
+}
+
+/* BACKGROUND */
+
+.bg-container{
+position:fixed;
+inset:0;
+z-index:-1;
+}
+
+.bg-item{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+opacity:0;
+transition:opacity .5s ease;
+}
+
+.active-bg{
+opacity:1;
+}
+
+.overlay{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.65);
+}
+
+/* SCREEN */
+
+.screen{
+position:absolute;
+width:100%;
+max-width:900px;
+height:100%;
+padding:30px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+opacity:0;
+pointer-events:none;
+transition:.4s;
+}
+
+.screen.active{
+opacity:1;
+pointer-events:all;
+}
+
+/* TITLE */
+
+h1{
+font-size:2rem;
+margin-bottom:20px;
+text-align:center;
+line-height:1.5;
+}
+
+.subtitle{
+font-size:.7rem;
+margin-bottom:40px;
+color:#ddd;
+text-align:center;
+}
+
+/* BUTTON */
+
+.btn{
+padding:14px 28px;
+font-size:.7rem;
+border:3px solid white;
+cursor:pointer;
+text-transform:uppercase;
+box-shadow:4px 4px 0 black;
+transition:.15s;
+margin:5px;
+}
+
+.btn:hover{
+transform:translate(-3px,-3px);
+filter:brightness(1.2);
+}
+
+.btn-green{background:#27ae60;}
+.btn-blue{background:#2980b9;}
+.btn-red{background:#c0392b;}
+.btn-yellow{background:#f39c12;}
+.btn-grey{background:#555;}
+
+/* SELECT */
+
+.select-wrapper{
+position:relative;
+width:320px;
+height:300px;
+overflow:hidden;
+border:4px solid white;
+background:rgba(0,0,0,.6);
+}
+
+.slider-track{
+display:flex;
+height:100%;
+transition:transform .3s ease;
+}
+
+.char-card{
+min-width:100%;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+}
+
+.char-img{
+width:170px;
+height:170px;
+object-fit:contain;
+border:3px solid white;
+margin-bottom:15px;
+background:#222;
+}
+
+.char-name{
+font-size:.7rem;
+text-align:center;
+}
+
+.nav-btn{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+background:#444;
+border:3px solid white;
+padding:8px 12px;
+cursor:pointer;
+}
+
+.nav-btn.prev{left:5px;}
+.nav-btn.next{right:5px;}
+
+/* GAME */
+
+.game-info{
+margin-bottom:20px;
+font-size:.6rem;
+text-align:center;
+width:100%;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.grid-container{
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:12px;
+padding:20px;
+border:4px solid white;
+background:rgba(0,0,0,.6);
+width:100%;
+max-width:600px;
+}
+
+/* CARD */
+
+.card{
+width:70px;
+height:70px;
+perspective:1000px;
+cursor:pointer;
+}
+
+.card-inner{
+width:100%;
+height:100%;
+position:relative;
+transform-style:preserve-3d;
+transition:transform .6s;
+}
+
+.card.flipped .card-inner{
+transform:rotateY(180deg);
+}
+
+.card-front,
+.card-back{
+position:absolute;
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+border:3px solid white;
+backface-visibility:hidden;
+}
+
+.card-front{
+background:#444;
+font-size:1.2rem;
+color:#aaa;
+}
+
+.card-back{
+background:white;
+transform:rotateY(180deg);
+}
+
+.card-back img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+/* POPUP */
+
+.popup-overlay{
+position:fixed;
+inset:0;
+display:none;
+justify-content:center;
+align-items:center;
+z-index:100;
+}
+
+.popup-overlay.active{
+display:flex;
+}
+
+.popup-box{
+background:#333;
+border:4px solid white;
+padding:40px;
+text-align:center;
+}
+
+.popup-title{
+font-size:1.3rem;
+margin-bottom:20px;
+}
+
+.popup-message{
+font-size:.6rem;
+margin-bottom:30px;
+line-height:1.8;
+}
+
+.popup-buttons{
+display:flex;
+gap:15px;
+justify-content:center;
+flex-wrap:wrap;
+}
+</style>
+</head>
+
+<body>
+
+<!-- BACKGROUND -->
+
+<div class="bg-container">
+<video class="bg-item active-bg" id="bg-1" autoplay muted loop>
+<source src="background1.mp4" type="video/mp4">
+</video>
+<img src="background2.jpg" class="bg-item" id="bg-2">
+<img src="background3.jpg" class="bg-item" id="bg-3">
+<div class="overlay"></div>
+</div>
+
+<!-- START -->
+
+<div id="start-screen" class="screen active">
+<h1>MEMORY<br>TEST</h1>
+<p class="subtitle">MATCH THE PULLBATU!</p>
+<button class="btn btn-green" onclick="startGameMusic()">MULAI GAME</button>
+</div>
+
+<!-- SELECT -->
+
+<div id="select-screen" class="screen">
+<h2 style="font-size:.8rem;margin-bottom:20px;">PILIH KARAKTER</h2>
+
+<div class="select-wrapper">
+
+<button class="nav-btn prev" onclick="changeSlide(-1)">❮</button>
+
+<div class="slider-track" id="slider-track"></div>
+
+<button class="nav-btn next" onclick="changeSlide(1)">❯</button>
+
+</div>
+
+<div style="display:flex;gap:10px;margin-top:25px;">
+<button class="btn btn-blue" onclick="confirmSelection()">PILIH</button>
+<button class="btn btn-grey" onclick="goToStart()">KEMBALI</button>
+</div>
+
+</div>
+
+<!-- GAME -->
+
+<div id="game-screen" class="screen">
+
+<div class="game-info">
+<div>TARGET: <span id="target-char-name" style="color:#f39c12;"></span></div>
+<div>MOVES: <span id="moves-display"></span> / <span id="max-moves-display"></span></div>
+</div>
+
+<div class="grid-container" id="game-board"></div>
+
+<div style="margin-top:20px;">
+<button class="btn btn-grey" onclick="goToStart()">KEMBALI KE MENU</button>
+</div>
+
+</div>
+
+<!-- POPUP WIN -->
+
+<div class="popup-overlay" id="popup-win">
+<div class="popup-box">
+<div class="popup-title" style="color:#2ecc71;">KAMU MENANG!</div>
+<div class="popup-message">
+SELAMAT!<br>
+KAMU BERHASIL MENGUMPULKAN SEMUA PASANGAN!
+</div>
+
+<div class="popup-buttons">
+<button class="btn btn-green" onclick="restartGame()">MAIN LAGI</button>
+<button class="btn btn-red" onclick="goToStart()">KELUAR</button>
+</div>
+
+</div>
+</div>
+
+<!-- POPUP LOSE -->
+
+<div class="popup-overlay" id="popup-lose">
+<div class="popup-box">
+<div class="popup-title" style="color:#e74c3c;">GAME OVER</div>
+<div class="popup-message">
+MAAF!<br>
+GERAKAN TERLALU BANYAK!
+</div>
+
+<div class="popup-buttons">
+<button class="btn btn-yellow" onclick="restartGame()">COBA LAGI</button>
+<button class="btn btn-red" onclick="goToStart()">KELUAR</button>
+</div>
+
+</div>
+</div>
+
+<!-- AUDIO -->
+
+<audio id="bg-music" loop>
+<source src="music/background.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="flip-sound">
+<source src="music/flip.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="win-sound">
+<source src="music/win.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="lose-sound">
+<source src="music/lose.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+
+const characters=[
+{id:1,name:'Hwang choong',img:'karakter1/pose1.png'},
+{id:2,name:'Choi Yong meong',img:'karakter2/pose1.png'},
+{id:3,name:'Bamgeut',img:'karakter3/pose1.png'},
+{id:4,name:'Da-go-nyang',img:'karakter4/pose1.png'},
+{id:5,name:'Hhm nya ring',img:'karakter5/pose1.png'}
+];
+
+let currentSlideIndex=0;
+let selectedCharacter=null;
+
+let hasFlippedCard=false;
+let lockBoard=false;
+
+let firstCard,secondCard;
+
+let matchesFound=0;
+let movesCount=0;
+
+const totalPairs=5;
+const maxMoves=10;
+
+/* MUSIC START */
+
+function startGameMusic(){
+
+const music=document.getElementById("bg-music");
+music.volume=0.4;
+music.play();
+
+goToSelect();
+
+}
+
+/* BACKGROUND */
+
+function setBackground(n){
+
+document.querySelectorAll('.bg-item')
+.forEach(bg=>bg.classList.remove('active-bg'));
+
+document.getElementById('bg-'+n).classList.add('active-bg');
+
+}
+
+window.onload=()=>setBackground(1);
+
+/* SCREEN */
+
+function goToSelect(){
+
+setBackground(2);
+
+document.getElementById('start-screen').classList.remove('active');
+document.getElementById('select-screen').classList.add('active');
+
+renderSlider();
+
+}
+
+function goToStart(){
+
+location.reload();
+
+}
+
+function restartGame(){
+
+document.getElementById('popup-win').classList.remove('active');
+document.getElementById('popup-lose').classList.remove('active');
+
+document.getElementById('game-screen').classList.remove('active');
+document.getElementById('select-screen').classList.add('active');
+
+setBackground(2);
+
+renderSlider();
+
+}
+
+/* SLIDER */
+
+function renderSlider(){
+
+const track=document.getElementById('slider-track');
+
+track.innerHTML='';
+
+characters.forEach(char=>{
+
+const card=document.createElement('div');
+
+card.className='char-card';
+
+card.innerHTML=`
+<img src="${char.img}" class="char-img">
+<div class="char-name">${char.name}</div>
+`;
+
+track.appendChild(card);
+
+});
+
+currentSlideIndex=0;
+
+selectedCharacter=characters[currentSlideIndex];
+
+updateSliderPosition();
+
+}
+
+function changeSlide(dir){
+
+currentSlideIndex+=dir;
+
+if(currentSlideIndex>=characters.length)currentSlideIndex=0;
+if(currentSlideIndex<0)currentSlideIndex=characters.length-1;
+
+updateSliderPosition();
+
+selectedCharacter=characters[currentSlideIndex];
+
+}
+
+function updateSliderPosition(){
+
+document.getElementById('slider-track')
+.style.transform=`translateX(-${currentSlideIndex*100}%)`;
+
+}
+
+/* GAME */
+
+function confirmSelection(){
+
+setBackground(3);
+
+document.getElementById('target-char-name').innerText=selectedCharacter.name;
+
+document.getElementById('max-moves-display').innerText=maxMoves;
+
+document.getElementById('select-screen').classList.remove('active');
+document.getElementById('game-screen').classList.add('active');
+
+matchesFound=0;
+movesCount=0;
+
+updateMovesDisplay();
+
+startGame(selectedCharacter.id);
+
+}
+
+function startGame(id){
+
+const board=document.getElementById('game-board');
+
+board.innerHTML='';
+
+let deck=[];
+
+for(let i=1;i<=5;i++){
+
+let img=`karakter${id}/pose${i}.png`;
+
+deck.push({id:i,img});
+deck.push({id:i,img});
+
+}
+
+deck.sort(()=>0.5-Math.random());
+
+deck.forEach(item=>{
+
+const card=document.createElement('div');
+
+card.className='card';
+
+card.dataset.framework=item.id;
+
+card.innerHTML=`
+<div class="card-inner">
+<div class="card-front">?</div>
+<div class="card-back">
+<img src="${item.img}">
+</div>
+</div>
+`;
+
+card.addEventListener('click',flipCard);
+
+board.appendChild(card);
+
+});
+
+}
+
+/* CARD FLIP */
+
+function flipCard(){
+
+document.getElementById("flip-sound").play();
+
+if(lockBoard||this===firstCard)return;
+
+this.classList.add('flipped');
+
+if(!hasFlippedCard){
+
+hasFlippedCard=true;
+firstCard=this;
+return;
+
+}
+
+secondCard=this;
+
+movesCount++;
+
+updateMovesDisplay();
+
+checkMatch();
+
+}
+
+function updateMovesDisplay(){
+
+document.getElementById('moves-display').innerText=movesCount;
+
+}
+
+function checkMatch(){
+
+if(firstCard.dataset.framework===secondCard.dataset.framework){
+
+disableCards();
+
+}else{
+
+unflipCards();
+
+}
+
+}
+
+function disableCards(){
+
+firstCard.removeEventListener('click',flipCard);
+secondCard.removeEventListener('click',flipCard);
+
+matchesFound++;
+
+resetBoard();
+
+if(matchesFound===totalPairs){
+
+setTimeout(()=>showPopup('win'),400);
+
+}
+
+}
+
+function unflipCards(){
+
+lockBoard=true;
+
+if(movesCount>=maxMoves){
+
+setTimeout(()=>showPopup('lose'),800);
+
+return;
+
+}
+
+setTimeout(()=>{
+
+firstCard.classList.remove('flipped');
+secondCard.classList.remove('flipped');
+
+resetBoard();
+
+},800);
+
+}
+
+function resetBoard(){
+
+hasFlippedCard=false;
+lockBoard=false;
+
+firstCard=null;
+secondCard=null;
+
+}
+
+/* POPUP + SOUND */
+
+function showPopup(type){
+
+if(type==="win"){
+document.getElementById("win-sound").play();
+}
+
+if(type==="lose"){
+document.getElementById("lose-sound").play();
+}
+
+document.getElementById(type==='win'?'popup-win':'popup-lose')
+.classList.add('active');
+
+}
+
+</script>
+
+</body>
+</html>
